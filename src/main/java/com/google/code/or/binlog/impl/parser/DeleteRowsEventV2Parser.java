@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.google.code.or.binlog.BinlogEventV4Header;
 import com.google.code.or.binlog.BinlogParserContext;
+import com.google.code.or.binlog.impl.FileBasedBinlogParser;
 import com.google.code.or.binlog.impl.event.DeleteRowsEventV2;
 import com.google.code.or.binlog.impl.event.TableMapEvent;
 import com.google.code.or.common.glossary.Row;
@@ -71,7 +72,7 @@ public class DeleteRowsEventV2Parser extends AbstractRowEventParser {
 	protected List<Row> parseRows(XInputStream is, TableMapEvent tme, DeleteRowsEventV2 dre)
 	throws IOException {
 		final List<Row> r = new LinkedList<Row>();
-		while(is.available() > 0) {
+		while(is.available() > FileBasedBinlogParser.availableLimit) {
 			r.add(parseRow(is, tme, dre.getUsedColumns()));
 		}
 		return r;

@@ -19,6 +19,8 @@ package com.google.code.or.io.impl;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.code.or.common.glossary.UnsignedLong;
 import com.google.code.or.common.glossary.column.BitColumn;
@@ -40,6 +42,7 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	private int readLimit = 0;
 	private final byte[] buffer;
 	private final InputStream is;
+	private List<Byte> recordBytes;
 	
 
 	/**
@@ -47,11 +50,25 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	 */
 	public XInputStreamImpl(InputStream is) {
 		this(is, 512 *  1024);
+		recordBytes = new ArrayList<Byte>();
 	}
 	
 	public XInputStreamImpl(InputStream is, int size) {
 		this.is = is;
 		this.buffer = new byte[size];
+		recordBytes = new ArrayList<Byte>();
+	}
+	
+
+	public void startByteRecording()
+	{
+		recordBytes = new ArrayList<Byte>();
+	}
+
+	public byte[] stopRecording()
+	{
+		byte[] b = CodecUtils.toByteArray(recordBytes);
+		return b;
 	}
 
 	/**
@@ -68,6 +85,8 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	public byte[] readBytes(int length) throws IOException {
 		final byte[] r = new byte[length];
 		this.read(r, 0, length);
+		for(int i=0;i<length;i++)
+			recordBytes.add(r[i]);
 		return r;
 	}
 	
@@ -211,6 +230,7 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 			throw new ExceedLimitException();
 		} else {
 			if(this.head >= this.tail) doFill();
+			recordBytes.add(new Byte(this.buffer[this.head]));
 			final int r = this.buffer[this.head++] & 0xFF;
 			++this.readCount;
 			return r;

@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.google.code.or.binlog.BinlogEventV4Header;
 import com.google.code.or.binlog.BinlogParserContext;
+import com.google.code.or.binlog.impl.FileBasedBinlogParser;
 import com.google.code.or.binlog.impl.event.TableMapEvent;
 import com.google.code.or.binlog.impl.event.UpdateRowsEventV2;
 import com.google.code.or.common.glossary.Pair;
@@ -73,7 +74,7 @@ public class UpdateRowsEventV2Parser extends AbstractRowEventParser {
 	protected List<Pair<Row>> parseRows(XInputStream is, TableMapEvent tme, UpdateRowsEventV2 ure)
 	throws IOException {
 		final List<Pair<Row>> r = new LinkedList<Pair<Row>>();
-		while(is.available() > 0) {
+		while(is.available() > FileBasedBinlogParser.availableLimit) {
 			final Row before = parseRow(is, tme, ure.getUsedColumnsBefore());
 			final Row after = parseRow(is, tme, ure.getUsedColumnsAfter());
 			r.add(new Pair<Row>(before, after));

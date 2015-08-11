@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 
@@ -85,6 +86,17 @@ public final class CodecUtils {
 			r[i] = (byte)(num >>> (56 - i * 8));
 		}
 		return r;
+	}
+	
+	public static byte[] toByteArray(List<Byte> in)
+	{
+	    final int n = in.size();
+	    byte ret[] = new byte[n];
+	    for (int i = 0; i < n; i++)
+	    {
+	        ret[i] = in.get(i);
+	    }
+	    return ret;
 	}
 	
 	/**

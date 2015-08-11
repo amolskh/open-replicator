@@ -18,6 +18,8 @@ package com.google.code.or.binlog.impl;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,7 @@ public class FileBasedBinlogParser extends AbstractBinlogParser {
 	protected String binlogFilePath;
 	protected long stopPosition = 0;
 	protected long startPosition = 4;
+	public static  int availableLimit = 0;
 
 	
 	/**
@@ -109,6 +112,7 @@ public class FileBasedBinlogParser extends AbstractBinlogParser {
 			try {
 				//
 				final BinlogEventV4HeaderImpl header = new BinlogEventV4HeaderImpl();
+				((XInputStreamImpl)is).startByteRecording();
 				header.setTimestamp(is.readLong(4) * 1000L);
 				header.setEventType(is.readInt(1));
 				header.setServerId(is.readLong(4));
@@ -117,6 +121,7 @@ public class FileBasedBinlogParser extends AbstractBinlogParser {
 				header.setFlags(is.readInt(2));
 				header.setTimestampOfReceipt(System.currentTimeMillis());
 				is.setReadLimit((int)(header.getEventLength() - header.getHeaderLength())); // Ensure the event boundary
+				
 				if(isVerbose() && LOGGER.isInfoEnabled()) {
 					LOGGER.info("read an event, header: {}", header);
 				}
@@ -133,6 +138,27 @@ public class FileBasedBinlogParser extends AbstractBinlogParser {
 					BinlogEventParser parser = getEventParser(header.getEventType());
 					if(parser == null) parser = this.defaultParser;
 					parser.parse(is, header, context);
+					
+					byte[] eventBytes = ((XInputStreamImpl)is).stopRecording();
+					if(is.available() == 4 && null != eventBytes)
+					{
+						is.setReadLimit(4);
+						byte[] checkSumBytes = is.readBytes(4);
+						Checksum checksumUtility = new CRC32();
+						checksumUtility.update(eventBytes, 0, eventBytes.length);
+						long checkSumValComputed = checksumUtility.getValue();
+						long checkSumValReceived = CodecUtils.toLong(CodecUtils.toBigEndian(checkSumBytes),0,checkSumBytes.length);
+						if(checkSumValComputed != checkSumValReceived)
+						{
+							throw new RuntimeException("Checksum did not match for event type: " + header.getEventType());
+						}
+						else
+						{
+							//Event size greater than normal is used to detect that file has checksum enabled 
+							//This will be used for further event processing
+							availableLimit = 4;
+						}
+					}
 				}
 				
 				// Ensure the packet boundary
